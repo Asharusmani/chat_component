@@ -14,7 +14,6 @@ const css = `
     position: relative;
     overflow: hidden;
   }
-
   .auth-bg-orb1 {
     position: absolute;
     width: 600px; height: 600px;
@@ -39,7 +38,6 @@ const css = `
     background-size: 40px 40px;
     pointer-events: none;
   }
-
   .auth-card {
     position: relative;
     z-index: 10;
@@ -54,12 +52,10 @@ const css = `
     box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
     animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
   }
-
   @keyframes slideUp {
     from { opacity: 0; transform: translateY(30px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-
   .auth-brand {
     display: flex;
     align-items: center;
@@ -91,7 +87,6 @@ const css = `
     padding: 2px 8px;
     margin-left: 4px;
   }
-
   .auth-heading {
     font-family: 'Syne', sans-serif;
     font-size: 26px;
@@ -106,7 +101,6 @@ const css = `
     margin-bottom: 30px;
     line-height: 1.5;
   }
-
   .auth-tabs {
     display: flex;
     background: rgba(255,255,255,0.03);
@@ -135,7 +129,13 @@ const css = `
     color: #fff;
     box-shadow: 0 4px 14px rgba(99,102,241,0.35);
   }
-
+  .auth-name-row {
+    display: flex;
+    gap: 12px;
+  }
+  .auth-name-row .auth-field {
+    flex: 1;
+  }
   .auth-field { margin-bottom: 18px; }
   .auth-label {
     display: block;
@@ -174,7 +174,6 @@ const css = `
     background: rgba(99,102,241,0.06);
     box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
   }
-
   .auth-error {
     display: flex;
     align-items: center;
@@ -187,7 +186,6 @@ const css = `
     font-size: 13px;
     margin-bottom: 16px;
   }
-
   .auth-btn {
     width: 100%;
     padding: 14px;
@@ -217,19 +215,6 @@ const css = `
   .auth-btn:hover::after { opacity: 1; }
   .auth-btn:active { transform: translateY(0); }
   .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-  .auth-divider {
-    display: flex; align-items: center; gap: 12px;
-    margin: 22px 0;
-    color: rgba(255,255,255,0.15);
-    font-size: 12px;
-  }
-  .auth-divider::before, .auth-divider::after {
-    content: ''; flex: 1;
-    height: 1px;
-    background: rgba(255,255,255,0.07);
-  }
-
   .auth-switch {
     text-align: center;
     color: #6b6b8a;
@@ -243,7 +228,6 @@ const css = `
     transition: color 0.2s;
   }
   .auth-switch-link:hover { color: #a5b4fc; text-decoration: underline; }
-
   .auth-footer {
     margin-top: 28px;
     padding-top: 20px;
@@ -264,9 +248,12 @@ const css = `
 export default function AuthPage() {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState("signin");
-  const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false); // ← add karo
+
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -277,18 +264,22 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        if (!form.username || !form.email || !form.password) {
-          setError("Sab fields fill karein"); return;
+        if (!form.firstName || !form.lastName || !form.email || !form.password) {
+          setError("Sab fields fill karein");
+          setLoading(false);
+          return;
         }
-        await signUp(form.username, form.email, form.password);
+        await signUp(form.firstName, form.lastName, form.email, form.password);
       } else {
         if (!form.email || !form.password) {
-          setError("Email aur password daalen"); return;
+          setError("Email aur password daalen");
+          setLoading(false);
+          return;
         }
         await signIn(form.email, form.password);
       }
     } catch (err) {
-      setError(err.message || "Kuch masla hua, dobara try karein");
+      setError(err.response?.data?.message || err.message || "Kuch masla hua, dobara try karein");
     } finally {
       setLoading(false);
     }
@@ -323,13 +314,13 @@ export default function AuthPage() {
           <div className="auth-tabs">
             <button
               className={`auth-tab ${mode === "signin" ? "active" : ""}`}
-              onClick={() => setMode("signin")}
+              onClick={() => { setMode("signin"); setError(""); }}
             >
               Sign In
             </button>
             <button
               className={`auth-tab ${mode === "signup" ? "active" : ""}`}
-              onClick={() => setMode("signup")}
+              onClick={() => { setMode("signup"); setError(""); }}
             >
               Sign Up
             </button>
@@ -337,18 +328,34 @@ export default function AuthPage() {
 
           <form onSubmit={handleSubmit}>
             {mode === "signup" && (
-              <div className="auth-field">
-                <label className="auth-label">Username</label>
-                <div className="auth-input-wrap">
-                  <span className="auth-input-icon">👤</span>
-                  <input
-                    name="username"
-                    type="text"
-                    placeholder="aapka naam"
-                    value={form.username}
-                    onChange={handleChange}
-                    className="auth-input"
-                  />
+              <div className="auth-name-row">
+                <div className="auth-field">
+                  <label className="auth-label">First Name</label>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon">👤</span>
+                    <input
+                      name="firstName"
+                      type="text"
+                      placeholder="Pehla naam"
+                      value={form.firstName}
+                      onChange={handleChange}
+                      className="auth-input"
+                    />
+                  </div>
+                </div>
+                <div className="auth-field">
+                  <label className="auth-label">Last Name</label>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon">👤</span>
+                    <input
+                      name="lastName"
+                      type="text"
+                      placeholder="Aakhri naam"
+                      value={form.lastName}
+                      onChange={handleChange}
+                      className="auth-input"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -374,13 +381,42 @@ export default function AuthPage() {
                 <span className="auth-input-icon">🔒</span>
                 <input
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••••"
                   value={form.password}
                   onChange={handleChange}
                   className="auth-input"
+                  style={{ paddingRight: "44px" }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  style={{
+                    position: "absolute",
+                    right: "14px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "16px",
+                    opacity: 0.5,
+                    padding: 0,
+                    lineHeight: 1,
+                    color: "#f1f1ff",
+                    transition: "opacity 0.2s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = "0.9"}
+                  onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
               </div>
+              {mode === "signup" && (
+                <p style={{ fontSize: "11px", color: "#6b6b8a", marginTop: "6px", marginBottom: 0 }}>
+                  Min 8 characters, ek uppercase, ek number, ek special character (!@#$%)
+                </p>
+              )}
             </div>
 
             {error && (
@@ -393,8 +429,8 @@ export default function AuthPage() {
               {loading
                 ? "Thoda wait karein..."
                 : mode === "signin"
-                ? "Sign In karein →"
-                : "Account Banao →"}
+                  ? "Sign In karein →"
+                  : "Account Banao →"}
             </button>
           </form>
 
@@ -402,7 +438,7 @@ export default function AuthPage() {
             {mode === "signin" ? "Account nahi hai? " : "Pehle se account hai? "}
             <span
               className="auth-switch-link"
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+              onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); }}
             >
               {mode === "signin" ? "Sign Up karein" : "Sign In karein"}
             </span>
